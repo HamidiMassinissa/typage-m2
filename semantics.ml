@@ -179,3 +179,6 @@ let rec curry_monomorph env term =
      if tyA == tyA_expected
      then curry_monomorph ((s, tyA)::env) p2
      else failwith "Given type does not match type of expression"
+
+
+

@@ -4,7 +4,7 @@ type t = term
  and term =
    | Cons of constant
    | Var of variable
-   | Fun of fun_sym *term list
+   | Fun of fun_sym  * term list
 
  and constant = string
 
@@ -28,7 +28,7 @@ let variables_of_term (t:term) : variable list =
     | Fun (f, ts) -> List.fold_left aux acc ts
   in
   aux [] t
-    
+
 (** The Unification Algorithm [unify]
 
   (i)   Take an equational system E
@@ -61,7 +61,7 @@ let rec unify (e:equational_system) : substitution =
         then failwith "decompose rule: Terms have different arities"
         else
           let enriched_e =
-            List.fold_left2 (fun e e1 e2 -> Equality (e1, e2)::e) e l1 l2
+            List.fold_left2 (fun acc e1 e2 -> Equality (e1, e2)::acc) t l1 l2
           in
           unify enriched_e
 
@@ -69,11 +69,11 @@ let rec unify (e:equational_system) : substitution =
         (* check whether x belongs to Var(E) -Done by pattern matching ... *)
         (* ... and x doesn't belong to Var(t2) *)
         let vars_of_t2 = variables_of_term t2 in
+	[]
 
      | _, _ -> (* No rule is applicable *)
         unify t
 
-              
 (** The equational system E={s1=t1, ... , sn=tn} is in solved form iff
   (i)  All the si are distinct variables
   (ii) No si appears in tj (in other words, no variables appear in
@@ -96,7 +96,7 @@ let _ = solve fake_eq_sys
 
 
 
-(** deprecated [to_substitution] *)              
+(** deprecated [to_substitution] *)
 let to_substitution equational_system : substitution =
   List.map
     (fun (Equality(t1, t2)) ->
