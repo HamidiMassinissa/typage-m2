@@ -1,3 +1,5 @@
+(* recursive types *)
+
 type ty =
   | Tybase of type_identifier
   | Tyvar of type_variable
