@@ -1,30 +1,4 @@
-(** typage à la curry *)
-
-type term =
-  | Const of constant
-  | Var of variable
-  | Pair of term * term
-  | Lambda of variable * term
-  | App of term * term
-  | Let of variable * term * term
- and constant = string
- and variable = string
-
- and ty =
-   | TyBase of type_identifier
-   | TyProduct of ty * ty
-   | TyArrow of ty * ty
-
- and type_identifier = string
-
- (** type definition related to curry typing algorithm *)
- and tyscheme =
-   | TypeVar of type_variable
-   | TypeBase of type_identifier
-   | TypeArrow of tyscheme * tyscheme
-   | TypeProduct of tyscheme * tyscheme
-
- and type_variable = string
+open Ast
 
 (** type definition related to first order equational system
 
@@ -52,9 +26,9 @@ let type_variable_identifier s = s
 
 let fresh_type_variable =
   let r = ref 0 in
-  fun t ->
+  fun () ->
   incr r;
-  "alpha" ^ t ^ (string_of_int !r)
+  "α" ^ (string_of_int !r)
 
 let build_equational_system prog =
   let rec aux prog alpha_m se =
@@ -69,44 +43,41 @@ let build_equational_system prog =
        TyEq (alpha_m, ty_c)::se
 
     | Var v ->
-       let v = fresh_type_variable v in
+       let v = fresh_type_variable () in
        TyEq (alpha_m, TypeVar v)::se
 
     | Pair (n, l) ->
-       let alpha_n = TypeVar (fresh_type_variable "n") in
+       let alpha_n = TypeVar (fresh_type_variable ()) in
        let se_n = aux n alpha_n se in
-       let alpha_l = TypeVar (fresh_type_variable "l") in
+       let alpha_l = TypeVar (fresh_type_variable ()) in
        let se_l = aux l alpha_l se in
        TyEq (alpha_m, TypeProduct (alpha_n, alpha_l))
        :: se_n @ se_l
 
     | Lambda (x, n) ->
-       let alpha_n = TypeVar (fresh_type_variable "n") in
+       let alpha_n = TypeVar (fresh_type_variable ()) in
        let se_n = aux n alpha_n se in
-       let alpha_x = TypeVar (fresh_type_variable "l") in
+       let alpha_x = TypeVar (fresh_type_variable ()) in
        TyEq (alpha_m, TypeArrow (alpha_x, alpha_n))::se_n
 
     | App (n, l) ->
-       let alpha_n = TypeVar (fresh_type_variable "n") in
+       let alpha_n = TypeVar (fresh_type_variable ()) in
        let se_n = aux n alpha_n se in
-       let alpha_l = TypeVar (fresh_type_variable "l") in
+       let alpha_l = TypeVar (fresh_type_variable ()) in
        let se_l = aux l alpha_l se in
        TyEq (alpha_n, TypeArrow (alpha_l, alpha_m))
        :: se_n @ se_l
 
     | Let (x, n, l) ->
-       let alpha_n = TypeVar (fresh_type_variable "n") in
+       let alpha_n = TypeVar (fresh_type_variable ()) in
        let se_n = aux n alpha_n se in
-       let alpha_l = TypeVar (fresh_type_variable "l") in
+       let alpha_l = TypeVar (fresh_type_variable ()) in
        let se_l = aux l alpha_l se in
-       let alpha_x = TypeVar (fresh_type_variable "x") in
+       let alpha_x = TypeVar (fresh_type_variable ()) in
        TyEq (alpha_m, alpha_l)
        :: TyEq (alpha_x, alpha_n)
        :: se_n @ se_l
   in
-  let alpha_m = TypeVar (fresh_type_variable "m") in
+  let alpha_m = TypeVar (fresh_type_variable ()) in
   aux prog alpha_m []
 
-let eqs1 =
-  let term1 = Let("x", Lambda("x", Var "x"), App(Var "x", Var "x")) in
-  build_equational_system term1

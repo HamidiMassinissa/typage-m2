@@ -1,0 +1,12 @@
+(* this module implements a unification algorithm *)
+
+
+let tconstraint_to_string t =
+  let aconstraint = function
+    | CEq (a, b) ->
+      Printf.sprintf "%s =?= %s"
+        (HopixPrettyPrinter.(to_string typ a))
+        (HopixPrettyPrinter.(to_string typ b))
+  in
+  "[\n" ^ String.concat "\n" (List.map aconstraint t) ^ "\n]"
+

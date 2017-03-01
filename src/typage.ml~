@@ -1,0 +1,4 @@
+open BuildTypeConstraints
+
+let main =
+  Printf.printf "Créteil Soleil"
