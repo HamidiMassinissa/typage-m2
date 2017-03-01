@@ -1,20 +1,6 @@
 open Ast
-
-(** type definition related to first order equational system
-
-    in this system we have the following symetry between
-    first order terms and type schemes
-
-      1. TypeVar of term                       <==>   Var of variable
-
-      2. TypeBase if type_identifier           <==>   Cons of constant
-
-      3. TypeArrow of tyscheme * tyscheme   |  /__\
-         TypeProduct of tyscheme * tyscheme |  \  /  Fun of fun_sym * term list
-
-*)
-type tyconstraint = TyEq of tyscheme * tyscheme
- and equational_system = ty list
+open Unification
+open PrettyPrinter
 
 
 (** We introduce a table of type schemes for constants, called STC, such that
@@ -40,10 +26,12 @@ let build_equational_system prog =
 	   failwith (Printf.sprintf
 		       "Build_equational_system: Unknown constant %s" c)
        in
+       Printf.printf "%s : %s\n" (term_to_string prog) (tconstraint_to_string se);
        TyEq (alpha_m, ty_c)::se
 
     | Var v ->
        let v = fresh_type_variable () in
+       Printf.printf "%s : %s\n" (term_to_string prog) (tconstraint_to_string se);
        TyEq (alpha_m, TypeVar v)::se
 
     | Pair (n, l) ->
@@ -51,6 +39,7 @@ let build_equational_system prog =
        let se_n = aux n alpha_n se in
        let alpha_l = TypeVar (fresh_type_variable ()) in
        let se_l = aux l alpha_l se in
+       Printf.printf "%s : %s\n" (term_to_string prog) (tconstraint_to_string se);
        TyEq (alpha_m, TypeProduct (alpha_n, alpha_l))
        :: se_n @ se_l
 
@@ -58,6 +47,9 @@ let build_equational_system prog =
        let alpha_n = TypeVar (fresh_type_variable ()) in
        let se_n = aux n alpha_n se in
        let alpha_x = TypeVar (fresh_type_variable ()) in
+       Printf.printf "%s : %s\n"
+		     (term_to_string prog)
+		     (tconstraint_to_string se_n);
        TyEq (alpha_m, TypeArrow (alpha_x, alpha_n))::se_n
 
     | App (n, l) ->
@@ -65,6 +57,9 @@ let build_equational_system prog =
        let se_n = aux n alpha_n se in
        let alpha_l = TypeVar (fresh_type_variable ()) in
        let se_l = aux l alpha_l se in
+       Printf.printf "%s : %s\n"
+		     (term_to_string prog)
+		     (tconstraint_to_string (se_n@se_l));
        TyEq (alpha_n, TypeArrow (alpha_l, alpha_m))
        :: se_n @ se_l
 
@@ -74,6 +69,7 @@ let build_equational_system prog =
        let alpha_l = TypeVar (fresh_type_variable ()) in
        let se_l = aux l alpha_l se in
        let alpha_x = TypeVar (fresh_type_variable ()) in
+       Printf.printf "%s : %s\n" (term_to_string prog) (tconstraint_to_string se);
        TyEq (alpha_m, alpha_l)
        :: TyEq (alpha_x, alpha_n)
        :: se_n @ se_l

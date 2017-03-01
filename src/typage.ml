@@ -1,6 +1,7 @@
 open Ast
 open BuildTypeConstraints
 open Unification
+open PrettyPrinter
 
 let main =
   let term2 = Lambda("x", App(Var "x", Var "x")) in

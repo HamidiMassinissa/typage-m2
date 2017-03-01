@@ -1,26 +1,19 @@
 (* this module implements a unification algorithm *)
-
 open Ast
-open BuildTypeConstraints
 
-let rec typescheme_to_string t =
-  match t with
-  | TypeVar tv -> tv
-  | TypeBase tid -> tid
-  | TypeArrow (tscha,tschb) ->
-     typescheme_to_string tscha ^ " → " ^
-       typescheme_to_string tschb
-  | TypeProduct (tscha,tschb) ->
-     typescheme_to_string tscha ^ " × " ^
-       typescheme_to_string tschb
+(** type definition related to first order equational system
 
-let tconstraint_to_string t =
-  let aconstraint = function
-    | TyEq (a, b) ->
-      Printf.sprintf "%s =?= %s"
-        (typescheme_to_string a)
-        (typescheme_to_string b)
-  in
-  "[\n" ^ String.concat "\n" (List.map aconstraint t) ^ "\n]"
+    in this system we have the following symetry between
+    first order terms and type schemes
 
-let term_to_string t = ""
+      1. TypeVar of term                       <==>   Var of variable
+
+      2. TypeBase if type_identifier           <==>   Cons of constant
+
+      3. TypeArrow of tyscheme * tyscheme   |  /__\
+         TypeProduct of tyscheme * tyscheme |  \  /  Fun of fun_sym * term list
+
+*)
+type tyconstraint = TyEq of tyscheme * tyscheme
+ and equational_system = ty list
+
