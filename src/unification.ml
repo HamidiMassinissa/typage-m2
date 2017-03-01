@@ -6,7 +6,7 @@ open Ast
     in this system we have the following symetry between
     first order terms and type schemes
 
-      1. TypeVar of term                       <==>   Var of variable
+      1. TypeVar of type_variable              <==>   Var of variable
 
       2. TypeBase if type_identifier           <==>   Cons of constant
 
