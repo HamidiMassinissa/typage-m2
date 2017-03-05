@@ -1,14 +1,15 @@
 open Ast
+open MonoAst
 open Unification
 
 let rec typescheme_to_string t =
   match t with
-  | TypeVar tv -> tv
-  | TypeBase tid -> tid
-  | TypeArrow (tscha,tschb) ->
+  | TVar tv -> tv
+  | TBase tid -> tid
+  | TArrow (tscha,tschb) ->
      typescheme_to_string tscha ^ " → " ^
        typescheme_to_string tschb
-  | TypeProduct (tscha,tschb) ->
+  | TProduct (tscha,tschb) ->
      typescheme_to_string tscha ^ " × " ^
        typescheme_to_string tschb
 

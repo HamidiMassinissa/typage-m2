@@ -1,4 +1,5 @@
 open Ast
+open MonoAst
 open Unification
 open PrettyPrinter
 
@@ -25,10 +26,22 @@ end
    for example: STC(fst)=alpha*beta->alpha
 *)
 let stc : (constant * tyscheme) list =
-  let bool = TypeBase "bool" in
-  let int = TypeBase "int" in
+  let bool = TBase "bool" in
+  let int = TBase "int" in
   [
-    ("+", TypeArrow (TypeProduct (int,int),int)]
+    ("+", TArrow (TProduct (int,int),int));
+    (* fst type schemes *)
+    ("fst", TArrow (TProduct (int,int),int));
+    ("fst", TArrow (TProduct (int,bool),int));
+    ("fst", TArrow (TProduct (bool,int),bool));
+    ("fst", TArrow (TProduct (bool,bool),bool));
+    (* snd type schemes *)
+    ("snd", TArrow (TProduct (int,int),int));
+    ("snd", TArrow (TProduct (int,bool),bool));
+    ("snd", TArrow (TProduct (bool,int),int));
+    ("snd", TArrow (TProduct (bool,bool),bool));
+    (* TODO *)
+  ]
 
 let type_variable_identifier s = s
 
@@ -62,54 +75,54 @@ let build_equational_system prog =
          with Not_found ->
            fresh_type_variable v
        in
-       let se = TyEq (alpha_m, TypeVar tyvar)::se in
+       let se = TyEq (alpha_m, TVar tyvar)::se in
        Printf.printf "%s : %s\n"
                      (term_to_string prog)
-                     (tconstraint_to_string [TyEq (alpha_m, TypeVar tyvar)]);
+                     (tconstraint_to_string [TyEq (alpha_m, TVar tyvar)]);
        se 
 
     | Pair (n, l) ->
-       let alpha_n = TypeVar (fresh_type_variable (term_to_string n)) in
+       let alpha_n = TVar (fresh_type_variable (term_to_string n)) in
        let se_n = aux n alpha_n se tyenv in
-       let alpha_l = TypeVar (fresh_type_variable (term_to_string l)) in
+       let alpha_l = TVar (fresh_type_variable (term_to_string l)) in
        let se_l = aux l alpha_l se tyenv in
-       let se = TyEq (alpha_m, TypeProduct (alpha_n, alpha_l)) :: se_n @ se_l in
+       let se = TyEq (alpha_m, TProduct (alpha_n, alpha_l)) :: se_n @ se_l in
        Printf.printf "%s : %s\n"
                      (term_to_string prog)
-                     (tconstraint_to_string [TyEq (alpha_m, TypeProduct (alpha_n, alpha_l))]);
+                     (tconstraint_to_string [TyEq (alpha_m, TProduct (alpha_n, alpha_l))]);
        se
        
 
     | Lambda (x, n) ->
        let fresh_x = fresh_type_variable x in
-       let alpha_x = TypeVar fresh_x in
+       let alpha_x = TVar fresh_x in
        let tyenv' = TypingEnvironment.bind tyenv x fresh_x in
-       let alpha_n = TypeVar (fresh_type_variable (term_to_string n)) in
+       let alpha_n = TVar (fresh_type_variable (term_to_string n)) in
        let se_n = aux n alpha_n se tyenv' in
-       let se = TyEq (alpha_m, TypeArrow (alpha_x, alpha_n))::se_n in
+       let se = TyEq (alpha_m, TArrow (alpha_x, alpha_n))::se_n in
        Printf.printf "%s : %s\n"
 		     (term_to_string prog)
-		     (tconstraint_to_string [TyEq (alpha_m, TypeArrow (alpha_x, alpha_n))]);
+		     (tconstraint_to_string [TyEq (alpha_m, TArrow (alpha_x, alpha_n))]);
        se 
 
     | App (n, l) ->
-       let alpha_n = TypeVar (fresh_type_variable (term_to_string n)) in
+       let alpha_n = TVar (fresh_type_variable (term_to_string n)) in
        let se_n = aux n alpha_n se tyenv in
-       let alpha_l = TypeVar (fresh_type_variable (term_to_string l)) in
+       let alpha_l = TVar (fresh_type_variable (term_to_string l)) in
        let se_l = aux l alpha_l se tyenv in
-       let se = TyEq (alpha_n, TypeArrow (alpha_l, alpha_m)) :: se_n @ se_l in
+       let se = TyEq (alpha_n, TArrow (alpha_l, alpha_m)) :: se_n @ se_l in
        Printf.printf "%s : %s\n"
 		     (term_to_string prog)
-		     (tconstraint_to_string [TyEq (alpha_n, TypeArrow (alpha_l, alpha_m))]);
+		     (tconstraint_to_string [TyEq (alpha_n, TArrow (alpha_l, alpha_m))]);
        se 
 
     | Let (x, n, l) ->
        let fresh_x = fresh_type_variable x in
-       let alpha_x = TypeVar fresh_x in
+       let alpha_x = TVar fresh_x in
        let tyenv' = TypingEnvironment.bind tyenv x fresh_x in
-       let alpha_n = TypeVar (fresh_type_variable (term_to_string n)) in
+       let alpha_n = TVar (fresh_type_variable (term_to_string n)) in
        let se_n = aux n alpha_n se tyenv' in
-       let alpha_l = TypeVar (fresh_type_variable (term_to_string l)) in
+       let alpha_l = TVar (fresh_type_variable (term_to_string l)) in
        let se_l = aux l alpha_l se tyenv' in
        let se =
          TyEq (alpha_m, alpha_l)
@@ -121,6 +134,6 @@ let build_equational_system prog =
                      (tconstraint_to_string [TyEq (alpha_m, alpha_l); TyEq (alpha_x, alpha_n)]);
        se 
   in
-  let alpha_m = TypeVar (fresh_type_variable (term_to_string prog)) in
+  let alpha_m = TVar (fresh_type_variable (term_to_string prog)) in
   aux prog alpha_m [] TypingEnvironment.empty
 

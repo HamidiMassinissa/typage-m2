@@ -1,5 +1,6 @@
 (* this module implements a unification algorithm *)
 open Ast
+open MonoAst
 
 (** type definition related to first order equational system
 
