@@ -4,165 +4,8 @@ open PolyAst
 open MonoAst
 open Unification
 open PrettyPrinter
-
-module OrderedTypeVariables = struct
-  type t = type_variable
-  let compare = String.compare
-end
-
-module TypeVariablesSet = Set.Make(OrderedTypeVariables)
-
-module TypingEnvironment : sig
-  type t
-  type key = variable
-  type value = polyty 
-  val empty: t
-  val bind: t -> key -> value -> t
-  exception BindingNotFound
-  val lookup: t -> key -> value 
-  val map_assoc: (value -> value) -> t -> t
-  val free_variables: t -> TypeVariablesSet.t 
-  val generalize: t -> tyscheme -> value
-end = struct
-  type t = (variable * polyty) list
-
-  type key = variable
-
-  type value = polyty 
-
-  let empty = []
-
-  let bind env var tyvar =
-    (* TODO occursCheck *)
-    (var,tyvar)::env
-
-  exception BindingNotFound
-              
-  let lookup env var =
-    try
-      List.assoc var env
-    with Not_found -> raise BindingNotFound
-
-  let map_assoc f env =
-    List.map (fun (key,value) -> (key, f value)) env
-
-  let rec tyscheme_free_variables tysch =
-    match tysch with
-    | TVar tv -> TypeVariablesSet.singleton tv
-    | TBase _ -> TypeVariablesSet.empty
-    | TArrow (ity,oty) | TProduct (ity,oty) ->
-       let s1 = tyscheme_free_variables ity in
-       let s2 = tyscheme_free_variables oty in
-       TypeVariablesSet.union s1 s2
-
-  let free_variables env =
-    List.fold_left
-      (fun set (_,TForAll (tvs,tys)) ->
-        let s = tyscheme_free_variables tys in
-        let tvs_set = TypeVariablesSet.of_list tvs in
-        let fv_tys = TypeVariablesSet.diff s tvs_set in
-        TypeVariablesSet.union set fv_tys 
-      ) TypeVariablesSet.empty env
-
-  let generalize (tyenv:t) (typ:tyscheme) : polyty =
-    let typ_fv = tyscheme_free_variables typ in
-    let env_fv = free_variables tyenv in
-    let tvs = TypeVariablesSet.(elements (diff typ_fv env_fv)) in
-    TForAll (tvs,typ)
-
-end
-
-module Substitution : sig
-  type t
-  type substitution
-  val identity: substitution
-  val apply: substitution -> tyscheme -> tyscheme 
-  val apply_to_polyty: substitution -> polyty -> polyty
-  val apply_to_env: substitution -> TypingEnvironment.t -> TypingEnvironment.t
-  val compose: substitution -> substitution -> substitution
-  val bind: substitution -> type_variable -> tyscheme -> substitution
-end = struct
-
-  module OrderedSubstitution = struct
-    type t = type_variable
-    let compare = String.compare
-  end
-
-  module SubstitutionMap = Map.Make(OrderedSubstitution)
-
-  type substitution = tyscheme SubstitutionMap.t 
-
-  type t = substitution
-
-  let identity = SubstitutionMap.empty 
-
-  let rec apply subst tysch =
-    match tysch with
-    | TVar tv ->
-       (try
-         SubstitutionMap.find tv subst
-       with Not_found -> tysch)
-    | TBase tb -> tysch
-    | TArrow (ity,oty) ->
-       let ity' = apply subst ity in
-       let oty' = apply subst oty in
-       TArrow (ity',oty')
-    | TProduct (aty,bty) ->
-       let aty' = apply subst aty in
-       let bty' = apply subst bty in
-       TProduct (aty',bty')
-
-  let apply_to_polyty subst (TForAll (vs,tysch)) =
-    let tysch' = apply subst tysch in
-    let vs' =
-      List.filter
-        (*(fun tv -> List.(mem tv (fst (split subst)))) vs*)
-        (fun tv -> SubstitutionMap.mem tv subst) vs
-    in
-    TForAll (vs', tysch')
-
-  let apply_to_env subst env =
-    TypingEnvironment.map_assoc
-      (fun pty -> apply_to_polyty subst pty) env
-
-  let apply_to_subst subst s =
-    SubstitutionMap.map (fun tysch -> apply subst tysch) s
-
-  let compose asubst bsubst =
-    let bsubst' = apply_to_subst asubst bsubst in
-    SubstitutionMap.union asubst bsubst'
-    
-  exception InvalidBinding of string
-
-  let bind subst tv tysch =
-    (*let rec mem subst tv =
-      List.exists (fun (tv',_) -> tv = tv') subst*)
-
-    let rec occurs_check tv tysch =
-      match tysch with
-      | TVar tv' when tv = tv' ->
-         raise (InvalidBinding
-                  (Printf.sprintf "type variable %s occurs in type %s"
-                                  tv (typescheme_to_string tysch)))
-      | TArrow (ity,oty) ->
-         occurs_check tv ity;
-         occurs_check tv oty
-      | TProduct (aty,bty) ->
-         occurs_check tv aty;
-         occurs_check tv bty
-      | TBase _ | TVar _ -> ()
-
-    in
-    if (SubstitutionMap.mem tv subst)
-    then raise (InvalidBinding
-                  (Printf.sprintf "type variable %s already binded" tv))
-    else
-      begin
-        occurs_check tv tysch;
-        SubstitutionMap.add tv tysch subst
-      end
-    
-end
+open TypingEnvironment
+open Substitution
 
 let polyStc : (constant * polyty) list =
   let bool = TBase "bool" in
@@ -170,6 +13,7 @@ let polyStc : (constant * polyty) list =
   let a = TVar "α" in
   let b = TVar "β" in
   [
+    ("1", TForAll ([], int));
     ("+", TForAll ([], TArrow(TProduct(int,int),int)));
     ("fst", TForAll (["α";"β"],TArrow(TProduct(a,b),a)));
     ("snd", TForAll (["α";"β"],TArrow(TProduct(a,b),b)));
@@ -251,6 +95,7 @@ let damasMilnerTofte term =
   let rec aux context term =
     match term with
     | Var x ->
+       Printf.printf "%s\n" (term_to_string term);
        let typeA = try
            TypingEnvironment.lookup context x
          with TypingEnvironment.BindingNotFound ->
@@ -259,6 +104,7 @@ let damasMilnerTofte term =
        instantiate typeA, Substitution.identity
 
     | Const c ->
+       Printf.printf "%s\n" (term_to_string term);
        let typeA = try
            List.assoc c polyStc
          with Not_found ->
@@ -267,6 +113,7 @@ let damasMilnerTofte term =
        instantiate typeA, Substitution.identity
 
     | Lambda (x,n) ->
+       Printf.printf "%s\n" (term_to_string term);
        let alpha = TVar (fresh_type_variable x) in
        let context' = TypingEnvironment.bind context x (TForAll ([],alpha)) in
        let (typeB,ro) = aux context' n in
@@ -279,6 +126,7 @@ let damasMilnerTofte term =
        TArrow (alpha', typeB), ro
 
     | App (n,l) ->
+       Printf.printf "%s\n" (term_to_string term);
        let (typeB,roB) = aux context n in
        let context' = Substitution.apply_to_env roB context in
        let (typeC,roC) = aux context' l in
@@ -289,6 +137,7 @@ let damasMilnerTofte term =
         Substitution.compose (Substitution.compose mu roC) roB)
 
     | Pair (n,l) ->
+       Printf.printf "%s\n" (term_to_string term);
        let (typeB,roB) = aux context n in
        let context' = Substitution.apply_to_env roB context in
        let (typeC,roC) = aux context' l in
@@ -296,6 +145,7 @@ let damasMilnerTofte term =
        (TProduct (typeB', typeC), Substitution.compose roC roB)
  
     | Let (x,n,l) ->
+       Printf.printf "%s\n" (term_to_string term);
        let (typeB,roB) = aux context n in
        let context' = Substitution.apply_to_env roB context in
        let genB = TypingEnvironment.generalize context' typeB in
