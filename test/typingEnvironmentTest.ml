@@ -40,7 +40,7 @@ let generalize_when_all_monotype_variables_are_bound_in_the_context_2 test_ctxt 
     
 let suite =
   "typingEnvionmentTests">:::
-    [
+   [
       "generalize in an empty environment should
        quantify all variables of the monotype"
       >::generalize_quantify_all_monotype_variables;

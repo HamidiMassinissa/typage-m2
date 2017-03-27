@@ -1,5 +1,4 @@
 open Ast
-open BuildTypeConstraints
 open PolyTypeInference
 open PrettyPrinter
 open Substitution
@@ -13,7 +12,13 @@ let main =
   Printf.printf "\nTesting Polymorphic Types\n";
   let polyterm0 = Lambda("x", App(Var "x",Var "x")) in
   Printf.printf "%s\n" (term_to_string polyterm0);
-  damasMilnerTofte polyterm0
+  try
+    let se = BuildTypeConstraints.build_equational_system polyterm0 in
+    Printf.printf "\n%s\n" (tconstraint_to_string se);
+    ignore(damasMilnerTofte polyterm0);
+  with Substitution.OccurCheck (tv,tysch) ->
+    Printf.printf "ekchepchen";
+    
 
   (*
   let polyterm5 = Lambda("x",Var "x") in
