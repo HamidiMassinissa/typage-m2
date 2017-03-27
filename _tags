@@ -1,3 +1,4 @@
 # source directory
 <src> : include
 <test> : include
+true : package(oUnit)

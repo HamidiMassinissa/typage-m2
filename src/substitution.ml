@@ -11,8 +11,10 @@ module Substitution : sig
   val apply_to_polyty: substitution -> polyty -> polyty
   val apply_to_env: substitution -> TypingEnvironment.t -> TypingEnvironment.t
   val compose: substitution -> substitution -> substitution
+  exception InvalidBinding of string
+  exception OccurCheck of type_variable * tyscheme
   val bind: substitution -> type_variable -> tyscheme -> substitution
-  val print: substitution -> unit 
+  val to_string: substitution -> string 
 end = struct
 
   module OrderedSubstitution = struct
@@ -73,17 +75,16 @@ end = struct
       ) asubst bsubst'
     
   exception InvalidBinding of string
+  exception OccurCheck of type_variable * tyscheme
 
-  let bind subst tv tysch =
+  let bind subst tv typescheme =
     (*let rec mem subst tv =
       List.exists (fun (tv',_) -> tv = tv') subst*)
 
     let rec occurs_check tv tysch =
       match tysch with
       | TVar tv' when tv = tv' ->
-         raise (InvalidBinding
-                  (Printf.sprintf "type variable %s occurs in type %s"
-                                  tv (typescheme_to_string tysch)))
+         raise (OccurCheck (tv,typescheme))
       | TArrow (ity,oty) ->
          occurs_check tv ity;
          occurs_check tv oty
@@ -98,13 +99,18 @@ end = struct
                   (Printf.sprintf "type variable %s already binded" tv))
     else
       begin
-        occurs_check tv tysch;
-        SubstitutionMap.add tv tysch subst
+        occurs_check tv typescheme;
+        SubstitutionMap.add tv typescheme subst
       end
 
-  let print subst =
-    SubstitutionMap.iter
-      (fun tv tysch ->
-        Printf.printf "%s ↦ %s\n" tv (typescheme_to_string tysch)) subst
+  let to_string subst =
+    if SubstitutionMap.is_empty subst
+    then Printf.sprintf "∅\n"
+    else
+      "{ " ^
+      SubstitutionMap.fold
+        (fun tv tysch acc ->
+          Printf.sprintf "%s; %s ↦ %s" acc tv (typescheme_to_string tysch)) subst ""
+      ^ " }\n"
     
 end
