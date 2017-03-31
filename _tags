@@ -1,4 +1,5 @@
 # source directory
 <src> : include
+<src/rectypes> : include
 <test> : include
 true : package(oUnit)

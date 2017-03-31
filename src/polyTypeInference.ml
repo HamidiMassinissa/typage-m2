@@ -31,7 +31,7 @@ let fresh_type_variable =
   let r = ref 0 in
   fun t ->
   incr r;
-  if !(Options.verbose)
+  if !Options.verbose
   then "α(" ^ t ^ ")" ^ (string_of_int !r)
   else "α" ^ (string_of_int !r)
 
@@ -64,14 +64,11 @@ let most_general_unifier (TyEq(aty,bty)) =
   let rec unify aty bty =
     begin match (aty,bty) with
     | aty, bty when aty == bty -> (* erase *)
-       Printf.printf "type equality encountred %s %s\n"
-                     (typescheme_to_string aty) (typescheme_to_string bty);
        Substitution.identity
 
     | TVar tv, bty -> (* bind *)
-       (* occur check (tv does not belong to fv(bty))*)
        (try
-          Substitution.bind (Substitution.identity) tv bty
+          Substitution.bind ~rectype:!Options.rectype Substitution.identity tv bty
         with
         | Substitution.OccurCheck (tv,tysch) ->
            (Printf.printf
@@ -83,8 +80,7 @@ let most_general_unifier (TyEq(aty,bty)) =
              tv (typescheme_to_string tysch)))
 
     | aty, TVar tv -> (* reorient *)
-       (* occur check (tv does not belong to fv(aty))*)
-       Substitution.bind (Substitution.identity) tv aty
+       Substitution.bind ~rectype:!Options.rectype Substitution.identity tv aty
 
     | TArrow (aity,aoty), TArrow (bity,boty) -> (* decompose *)
        let subst1 = unify aity bity in
@@ -119,7 +115,6 @@ let damasMilnerTofte ?(context) term =
   let rec aux context term =
     match term with
     | Var x ->
-       (*Printf.printf "%s\n" (term_to_string term);*)
        let typeA = try
            TypingEnvironment.lookup context x
          with TypingEnvironment.BindingNotFound ->
@@ -128,7 +123,6 @@ let damasMilnerTofte ?(context) term =
        instantiate typeA, Substitution.identity
 
     | Const c ->
-       (*Printf.printf "%s\n" (term_to_string term);*)
        let typeA = try
            List.assoc c polyStc
          with Not_found ->
@@ -137,7 +131,6 @@ let damasMilnerTofte ?(context) term =
        instantiate typeA, Substitution.identity
 
     | Lambda (x,n) ->
-       (*Printf.printf "%s\n" (term_to_string term);*)
        let alpha = TVar (fresh_type_variable x) in
        let context' = TypingEnvironment.bind context x (TForAll ([],alpha)) in
        let (typeB,ro) = aux context' n in
@@ -147,50 +140,31 @@ let damasMilnerTofte ?(context) term =
           binders) so, length of vs should be null.
               assert(List.length vs == 0);
         *)
-       (*Printf.printf "[Lambda]ro corresponding to n\n";
-       Printf.printf "%s" (Substitution.to_string ro);*)
        TArrow (alpha', typeB), ro
 
     | App (n,l) ->
-       (*Printf.printf "%s\n" (term_to_string term);*)
        let (typeB,roB) = aux context n in
        let context' = Substitution.apply_to_env roB context in
        let (typeC,roC) = aux context' l in
        let alpha = TVar (fresh_type_variable "AppRule") in
        let typeB' = Substitution.apply roC typeB in
        let mu = most_general_unifier (TyEq (typeB',TArrow (typeC, alpha))) in
-       (*Printf.printf "[App]roB corresponding to n\n";
-       Printf.printf "%s" (Substitution.to_string roB);
-       Printf.printf "[App]roC corresponding to l\n";
-       Printf.printf "%s" (Substitution.to_string roC);*)
        (Substitution.apply mu alpha,
         Substitution.compose (Substitution.compose mu roC) roB)
 
     | Pair (n,l) ->
-       (*Printf.printf "%s\n" (term_to_string term);*)
        let (typeB,roB) = aux context n in
        let context' = Substitution.apply_to_env roB context in
        let (typeC,roC) = aux context' l in
        let typeB' = Substitution.apply roC typeB in
-       (*Printf.printf "[Pair]roB corresponding to n\n";
-       Printf.printf "%s" (Substitution.to_string roB);
-       Printf.printf "[Pair]roC corresponding to l\n";
-       Printf.printf "%s" (Substitution.to_string roC);*)
        (TProduct (typeB', typeC), Substitution.compose roC roB)
  
     | Let (x,n,l) ->
-       (*Printf.printf "%s\n" (term_to_string term);*)
        let (typeB,roB) = aux context n in
        let context' = Substitution.apply_to_env roB context in
        let genB = TypingEnvironment.generalize context' typeB in
        let context'' = TypingEnvironment.bind context x genB in
        let (typeC,roC) = aux context'' l in
-       (*Printf.printf "[Let]roB corresponding to n\n";
-       Printf.printf "%s" (Substitution.to_string roB);
-       Printf.printf "[Let]roC corresponding to l\n";
-       Printf.printf "%s" (Substitution.to_string roC);
-       Printf.printf "[Let]roC corresponding to l\n";*)
-       Printf.printf "%s" (Substitution.to_string (Substitution.compose roC roB));
        (typeC, Substitution.compose roC roB)
 
   in

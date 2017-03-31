@@ -16,4 +16,4 @@ open MonoAst
 
 *)
 type tyconstraint = TyEq of tyscheme * tyscheme
- and equational_system = ty list
+ and equational_system = tyconstraint list

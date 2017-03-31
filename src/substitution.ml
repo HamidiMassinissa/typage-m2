@@ -13,7 +13,7 @@ module Substitution : sig
   val compose: substitution -> substitution -> substitution
   exception InvalidBinding of string
   exception OccurCheck of type_variable * tyscheme
-  val bind: substitution -> type_variable -> tyscheme -> substitution
+  val bind: substitution -> ?rectype:bool -> type_variable -> tyscheme -> substitution
   val to_string: substitution -> string 
 end = struct
 
@@ -77,7 +77,7 @@ end = struct
   exception InvalidBinding of string
   exception OccurCheck of type_variable * tyscheme
 
-  let bind subst tv typescheme =
+  let bind subst ?(rectype=true) tv typescheme =
     (*let rec mem subst tv =
       List.exists (fun (tv',_) -> tv = tv') subst*)
 
@@ -98,10 +98,13 @@ end = struct
     then raise (InvalidBinding
                   (Printf.sprintf "type variable %s already binded" tv))
     else
-      begin
-        occurs_check tv typescheme;
-        SubstitutionMap.add tv typescheme subst
-      end
+      if rectype then
+          SubstitutionMap.add tv typescheme subst
+      else
+        begin
+          occurs_check tv typescheme;
+          SubstitutionMap.add tv typescheme subst
+        end
 
   let to_string subst =
     if SubstitutionMap.is_empty subst
@@ -110,7 +113,7 @@ end = struct
       "{ " ^
       SubstitutionMap.fold
         (fun tv tysch acc ->
-          Printf.sprintf "%s; %s ↦ %s" acc tv (typescheme_to_string tysch)) subst ""
+          Printf.sprintf "%s ↦ %s; %s" tv (typescheme_to_string tysch) acc) subst ""
       ^ " }\n"
     
 end

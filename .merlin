@@ -1,5 +1,7 @@
 S src
+S src/*
 S test
 B _build/src
+B _build/src/rectypes
 B _build/test
 PKG oUnit

@@ -7,13 +7,10 @@ type term =
   | Lambda of variable * term
   | App of term * term
   | Let of variable * term * term
- and constant = string
- and variable = string
 
- and ty =
-   | TBase of type_identifier
-   | TyProduct of ty * ty
-   | TyArrow of ty * ty
+ and constant = string
+
+ and variable = string
 
  and type_identifier = string
 

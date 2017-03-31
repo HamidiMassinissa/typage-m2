@@ -12,14 +12,14 @@
    where type matrice is a particular case of type 
  *)
 
-(* type matrice would correspond to the following type definition
-   which is the same as typescheme defined in ast.ml for monomor-
-   phic types:
-        type tymatrice =
-          | TypeBase of type_identifier
-          | TypeVar of type_variable
-          | TypeProduct of tymatrice * tymatrice
-          | TypeArrow of tymatrice * tymatrice
+(** type matrice would correspond to the following type definition
+    which is the same as typescheme defined in ast.ml for monomor-
+    phic types:
+         type tymatrice =
+           | TypeBase of type_identifier
+           | TypeVar of type_variable
+           | TypeProduct of tymatrice * tymatrice
+           | TypeArrow of tymatrice * tymatrice
 *)
 open MonoAst
 

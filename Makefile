@@ -1,6 +1,9 @@
 
 all: native byte tests
 
+rectype:
+	ocamlbuild -use-ocamlfind rectype.native
+
 native:
 	ocamlbuild -use-ocamlfind typage.native
 
