@@ -14,6 +14,8 @@ let polyStc : (constant * polyty) list =
   let b = TVar "β" in
   [
     ("1", TForAll ([], int));
+    ("2", TForAll ([], int));
+    ("true", TForAll ([], bool));
     ("+", TForAll ([], TArrow(TProduct(int,int),int)));
     ("fst", TForAll (["α";"β"],TArrow(TProduct(a,b),a)));
     ("snd", TForAll (["α";"β"],TArrow(TProduct(a,b),b)));
@@ -57,6 +59,10 @@ let instantiate (TForAll (tvs,tysch):polyty) : tyscheme =
        let renamings,aty' = aux aty renamings in
        let renamings,bty' = aux bty renamings in
        renamings,TProduct (aty',bty')
+
+    | TRec (binders,ty) ->
+       let renamings,ty' = aux ty renamings in
+       renamings,TRec (binders,ty)
   in
   snd (aux tysch [])
 

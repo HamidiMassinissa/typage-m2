@@ -6,6 +6,13 @@ open Substitution
 let main =
   CommandLineHandler.parse_command_line_arguments;
 
+  let polyterm0 = Lambda("x",Pair(Const "1",Const "2")) in
+  let ty,subst = damasMilnerTofte polyterm0 in
+  Printf.printf "%s" (Substitution.to_string subst);
+  Printf.printf "%s\n%s\n\n"
+                (term_to_string polyterm0)
+                (typescheme_to_string ty);
+ 
   let polyterm0 = Lambda("x",App(Var "x",Var "x")) in
   let ty,subst = damasMilnerTofte polyterm0 in
   Printf.printf "%s" (Substitution.to_string subst);
@@ -40,7 +47,7 @@ let main =
                 (term_to_string polyterm4)
                 (typescheme_to_string ty);
 
-  let polyterm3 = Let("f", Lambda("x", Var "x"), App(Var "f", Const "1")) in
+  let polyterm3 = Let("f", Lambda("x", Var "x"), Pair(App(Var "f", Const "1"),App(Var "f", Const "true"))) in
   let ty, subst = damasMilnerTofte polyterm3 in
   Printf.printf "%s" (Substitution.to_string subst);
   Printf.printf "%s\n%s\n\n"
